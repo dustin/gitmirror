@@ -37,6 +37,10 @@ function handleReq(req, res) {
             child.on('exit', function (code) {
                          console.log('bg child process updating ' + section
                                      + ' completed with exit code ' + code);
+                         if (code != 0) {
+                             console.log(labeledArray('stderr', stderr));
+                             console.log(labeledArray('stdout', stdout));
+                         }
                      });
         } else {
             child.on('exit', function (code) {
