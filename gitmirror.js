@@ -27,7 +27,7 @@ function handleReq(req, res) {
         var backgrounded = (preq.query && preq.query.bg == 'false') ? false : true;
 
         var stdout = [], stderr = [];
-        var child = spawn(git, ["remote", "update"],
+        var child = spawn(git, ["remote", "update", "-p"],
                           {'GIT_DIR': path.join(process.cwd(), section)});
         child.stdout.on('data', function (data) { stdout.push(data); });
         child.stderr.on('data', function (data) { stderr.push(data); });
