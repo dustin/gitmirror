@@ -1,7 +1,7 @@
 var http = require('http');
 var url = require('url');
 var path = require('path');
-var spawn = require('child_process').spawn;
+var exec = require('child_process').exec;
 
 // 0 == node, 1 == [this script]
 var git = process.argv[2];
@@ -27,8 +27,8 @@ function handleReq(req, res) {
         var backgrounded = (preq.query && preq.query.bg == 'false') ? false : true;
 
         var stdout = [], stderr = [];
-        var child = spawn(git, ["remote", "update", "-p"],
-                          {'GIT_DIR': path.join(process.cwd(), section)});
+        var child = exec(git + " remote update -p && " + git + " gc --auto",
+			 {'cwd': path.join(process.cwd(), section)});
         child.stdout.on('data', function (data) { stdout.push(data); });
         child.stderr.on('data', function (data) { stderr.push(data); });
         if (backgrounded) {
