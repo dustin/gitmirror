@@ -27,7 +27,8 @@ function handleReq(req, res) {
         var backgrounded = (preq.query && preq.query.bg == 'false') ? false : true;
 
         var stdout = [], stderr = [];
-        var child = exec(git + " remote update -p && " + git + " gc --auto",
+        var child = exec(git + " remote update -p && " + git + " gc --auto"
+                         + " && test -x hooks/post-fetch && ./hooks/post-fetch",
 			 {'cwd': path.join(process.cwd(), section)});
         child.stdout.on('data', function (data) { stdout.push(data); });
         child.stderr.on('data', function (data) { stderr.push(data); });
