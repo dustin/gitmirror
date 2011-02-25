@@ -23,6 +23,67 @@ function getFullPath(section) {
     return path.join(process.cwd(), section);
 }
 
+function logCommand(name, child) {
+    var stdout = [], stderr = [];
+    child.stdout.on('data', function (data) { stdout.push(data); });
+    child.stderr.on('data', function (data) { stderr.push(data); });
+    child.on('exit', function (code) {
+                 console.log('Completed execution of ' + name + ': ' + code);
+                 if (code != 0) {
+                     console.log(labeledArray('stderr', stderr));
+                     console.log(labeledArray('stdout', stdout));
+                     }
+                 });
+}
+
+function execIfExists(cb, path, cmd, cmdOpts) {
+    fs.stat(path, function(err, stats) {
+        if (err) {
+            cb();
+        } else {
+            console.log("Running " + cmd);
+            var child = exec(cmd, cmdOpts);
+            logCommand(cmd, child);
+            child.on('exit', cb);
+        }
+    });
+}
+
+function runSequence(functions) {
+    var current = 0;
+    function theCallback() {
+        var prev = current;
+        if (prev >= functions.length) {
+            return;
+        }
+        ++current;
+        functions[prev](theCallback);
+    }
+    theCallback();
+}
+
+function runHooks(section) {
+    var thePath = getFullPath(section);
+
+    var functions = [
+        function(cb) {
+            var child = exec(git + ' gc --auto', {'cwd': thePath});
+            logCommand('gc --auto in ' + thePath, child);
+            child.on('exit', cb);
+        },
+        function(cb) {
+            execIfExists(cb, path.join(thePath, 'hooks/post-fetch'),
+                         './hooks/post-fetch', {'cwd': thePath});
+        },
+        function(cb) {
+            execIfExists(cb, path.join('bin/post-fetch'),
+                         './bin/post-fetch');
+        }
+    ];
+
+    runSequence(functions);
+}
+
 function handleComplete(res, child, section, backgrounded) {
     var stdout = [], stderr = [];
     child.stdout.on('data', function (data) { stdout.push(data); });
@@ -47,11 +108,11 @@ function handleComplete(res, child, section, backgrounded) {
                              + labeledArray('stdout', stdout));
                  });
     }
+    child.on('exit', function(code) { runHooks(section); });
 }
 
 function gitUpdate(res, section, backgrounded) {
-    var child = exec(git + " remote update -p && " + git + " gc --auto"
-                     + " && test -x hooks/post-fetch && ./hooks/post-fetch",
+    var child = exec(git + " remote update -p",
 			         {'cwd': getFullPath(section)});
     handleComplete(res, child, section, backgrounded);
 }
