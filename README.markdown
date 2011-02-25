@@ -20,6 +20,12 @@ will be of my awesome `gitmirror` project.  We'll do the following:
     cd /tmp/gitmirrors
     git clone --bare --mirror git://github.com/dustin/gitmirror.git
 
+### Note for Github Usage
+
+If you're planning to use gitmirror with github, it will automatically
+create the mirrors for you on first contact, so you just need to make
+sure the default directory is there.
+
 ## Getting gitmirror Running
 
 Now install [node.js][node] and get this junk (see the clone
