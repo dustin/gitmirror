@@ -1,7 +1,7 @@
 var http = require('http');
 var url = require('url');
 var path = require('path');
-var exec = require('child_process').exec;
+var spawn = require('child_process').spawn;
 var querystring = require('querystring');
 var fs = require('fs');
 
@@ -36,13 +36,13 @@ function logCommand(name, child) {
                  });
 }
 
-function execIfExists(cb, path, cmd, cmdOpts) {
+function spawnIfExists(cb, path, cmd, args, cmdOpts) {
     fs.stat(path, function(err, stats) {
         if (err) {
             cb();
         } else {
             console.log("Running " + cmd);
-            var child = exec(cmd, cmdOpts);
+            var child = spawn(cmd, args, cmdOpts);
             logCommand(cmd, child);
             child.on('exit', cb);
         }
@@ -67,17 +67,17 @@ function runHooks(section) {
 
     var functions = [
         function(cb) {
-            var child = exec(git + ' gc --auto', {'cwd': thePath});
+            var child = spawn(git, ['gc', '--auto'], {'cwd': thePath});
             logCommand('gc --auto in ' + thePath, child);
             child.on('exit', cb);
         },
         function(cb) {
-            execIfExists(cb, path.join(thePath, 'hooks/post-fetch'),
-                         './hooks/post-fetch', {'cwd': thePath});
+            var fullPath = path.join(thePath, 'hooks/post-fetch');
+            spawnIfExists(cb, fullPath, fullPath, [], {'cwd': thePath});
         },
         function(cb) {
-            execIfExists(cb, path.join('bin/post-fetch'),
-                         './bin/post-fetch');
+            var fullPath = path.resolve('bin/post-fetch');
+            spawnIfExists(cb, fullPath, fullPath, [], {'cwd': thePath});
         }
     ];
 
@@ -112,7 +112,7 @@ function handleComplete(res, child, section, backgrounded) {
 }
 
 function gitUpdate(res, section, backgrounded) {
-    var child = exec(git + " remote update -p",
+    var child = spawn(git, ["remote", "update", "-p"],
 			         {'cwd': getFullPath(section)});
     handleComplete(res, child, section, backgrounded);
 }
@@ -124,7 +124,7 @@ function createRepo(res, section, backgrounded, payload) {
         repo = "git@github.com:" + payload.repository.owner.name +
             "/" + payload.repository.name + ".git";
     }
-    var child = exec(git + " clone --mirror --bare " + repo + " " + getFullPath(section));
+    var child = spawn(git, ["clone", "--mirror", "--bare", repo, getFullPath(section)]);
     handleComplete(res, child, section, backgrounded);
 }
 
