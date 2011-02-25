@@ -36,13 +36,16 @@ function logCommand(name, child) {
                  });
 }
 
-function spawnIfExists(cb, path, cmd, args, cmdOpts) {
+function spawnIfExists(cb, path, cmd, args, stdin, cmdOpts) {
     fs.stat(path, function(err, stats) {
         if (err) {
             cb();
         } else {
             console.log("Running " + cmd);
             var child = spawn(cmd, args, cmdOpts);
+            if (stdin) {
+                child.stdin.write(stdin);
+            }
             logCommand(cmd, child);
             child.on('exit', cb);
         }
@@ -62,29 +65,31 @@ function runSequence(functions) {
     theCallback();
 }
 
-function runHooks(section) {
+function runHooks(section, payload) {
     var thePath = getFullPath(section);
+    var payloadString = payload ? JSON.stringify(payload) : "";
 
     var functions = [
         function(cb) {
-            var child = spawn(git, ['gc', '--auto'], {'cwd': thePath});
-            logCommand('gc --auto in ' + thePath, child);
-            child.on('exit', cb);
+            spawnIfExists(cb, thePath, git, ['gc', '--auto'],
+                undefined, {'cwd': thePath});
         },
         function(cb) {
             var fullPath = path.join(thePath, 'hooks/post-fetch');
-            spawnIfExists(cb, fullPath, fullPath, [], {'cwd': thePath});
+            spawnIfExists(cb, fullPath, fullPath, [],
+                          payloadString, {'cwd': thePath});
         },
         function(cb) {
             var fullPath = path.resolve('bin/post-fetch');
-            spawnIfExists(cb, fullPath, fullPath, [], {'cwd': thePath});
+            spawnIfExists(cb, fullPath, fullPath, [],
+                          payloadString, {'cwd': thePath});
         }
     ];
 
     runSequence(functions);
 }
 
-function handleComplete(res, child, section, backgrounded) {
+function handleComplete(res, child, section, backgrounded, payload) {
     var stdout = [], stderr = [];
     child.stdout.on('data', function (data) { stdout.push(data); });
     child.stderr.on('data', function (data) { stderr.push(data); });
@@ -108,13 +113,13 @@ function handleComplete(res, child, section, backgrounded) {
                              + labeledArray('stdout', stdout));
                  });
     }
-    child.on('exit', function(code) { runHooks(section); });
+    child.on('exit', function(code) { runHooks(section, payload); });
 }
 
-function gitUpdate(res, section, backgrounded) {
+function gitUpdate(res, section, backgrounded, payload) {
     var child = spawn(git, ["remote", "update", "-p"],
 			         {'cwd': getFullPath(section)});
-    handleComplete(res, child, section, backgrounded);
+    handleComplete(res, child, section, backgrounded, payload);
 }
 
 function createRepo(res, section, backgrounded, payload) {
@@ -125,7 +130,7 @@ function createRepo(res, section, backgrounded, payload) {
             "/" + payload.repository.name + ".git";
     }
     var child = spawn(git, ["clone", "--mirror", "--bare", repo, getFullPath(section)]);
-    handleComplete(res, child, section, backgrounded);
+    handleComplete(res, child, section, backgrounded, payload);
 }
 
 function githubPost(res, section, backgrounded, payload) {
@@ -133,12 +138,9 @@ function githubPost(res, section, backgrounded, payload) {
                 + payload.repository.name);
     fs.stat(getFullPath(section), function(err, stats) {
                 if (err || !stats.isDirectory()) {
-                    createRepo(res, section,
-                    backgrounded,
-                    payload);
+                    createRepo(res, section, backgrounded, payload);
                 } else {
-                    gitUpdate(res, section,
-                    backgrounded);
+                    gitUpdate(res, section, backgrounded, payload);
                 }
             });
 }
