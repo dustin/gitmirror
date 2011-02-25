@@ -1,0 +1,15 @@
+Installing the gitmirror SMF service
+====================================
+
+Simply run setup.sh with a given set of parameters to install the SMF service:
+
+./setup.sh -z rpool -s -u
+
+-z rpool instructs the setup program to create the following ZFS filesystems:
+         rpool/gitmirror             /rpool/gitmirror
+         rpool/gitmirror/etc         /etc/opt/gitmirror
+         rpool/gitmirror/opt         /opt/gitmirror
+         rpool/gitmirror/var         /var/opt/gitmirror
+
+-s       instructs setup.sh to install the SMF service descriptor
+-u       instructs setup.sh to create users/groups/profiles etc.

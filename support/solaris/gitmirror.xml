@@ -1,0 +1,96 @@
+<?xml version="1.0"?>
+<!--
+
+Software License Agreement (BSD License)
+
+Copyright (c) 2011, Trond Norbye
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+    * Redistributions of source code must retain the above copyright
+notice, this list of conditions and the following disclaimer.
+
+    * Redistributions in binary form must reproduce the above
+copyright notice, this list of conditions and the following disclaimer
+in the documentation and/or other materials provided with the
+distribution.
+
+    * The names of the contributors may be used to endorse or promote
+products derived from this software without specific prior written
+permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+ -->
+<!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+<service_bundle type="manifest" name="gitmirror">
+  <service name="application/gitmirror" type="service" version="1">
+    <single_instance/>
+
+    <dependency name="multi-user-server"
+		grouping="require_all"
+		restart_on="none"
+		type="service">
+      <service_fmri value="svc:/milestone/multi-user-server" />
+    </dependency>
+
+    <property_group name="general" type="framework">
+      <propval name="action_authorization"
+	       type="astring"
+               value="solaris.smf.manage.gitmirror" />
+      <propval name="value_authorization"
+	       type="astring"
+               value="solaris.smf.value.gitmirror" />
+    </property_group>
+
+    <property_group name="startd" type="framework">
+      <propval name="ignore_error" type="astring" value="core,signal"/>
+    </property_group>
+
+    <property_group name="gitmirror" type="application">
+      <propval name="nodejs" type="astring"
+               value="/opt/node.js/bin/node" />
+      <propval name="git" type="astring"
+               value="/usr/bin/git" />
+    </property_group>
+
+    <instance name="gitmirror" enabled="false">
+      <exec_method type="method"
+		   name="start"
+		   exec="/lib/svc/method/gitmirror start"
+		   timeout_seconds="30" >
+        <method_context>
+          <method_credential user="gitmirror" group="gitmirror" />
+        </method_context>
+            </exec_method>
+      <exec_method type="method"
+		   name="stop"
+		   exec="/lib/svc/method/gitmirror stop %{restarter/contract}"
+		   timeout_seconds="60" >
+        <method_context>
+          <method_credential user="gitmirror" group="gitmirror" />
+        </method_context>
+      </exec_method>
+    </instance>
+
+    <stability value="Unstable" />
+    <template>
+      <common_name>
+        <loctext xml:lang="C">gitmirror</loctext>
+      </common_name>
+    </template>
+  </service>
+</service_bundle>
