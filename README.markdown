@@ -75,6 +75,23 @@ Now I've got a URL available on the internet I can use to set up
 github post-receive-hooks to update as well as git `post-commit` hooks
 for the more private/weird stuff.
 
+## Hooks
+
+gitmirror will run `post-fetch` hooks for you if you have them
+available.  One or both of the following will be executed (in this
+order):
+
+* `$gitmirrordir/current_repo.git/hooks/post-fetch`
+* `$gitmirrordir/bin/post-fetch`
+
+The first is the repository specific hook, allowing you to do stuff
+like CI integration or doc builds or something.
+
+The second is a single global hook that will run for every repo
+allowing you to have a common behavior across all updates (e.g. you
+might want to `touch 'git-daemon-export-ok'` or post something to
+twitter or chain a different hook or something.
+
 ----
 † No animals were harmed in the making of this software.
 
