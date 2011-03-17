@@ -45,8 +45,8 @@ function spawnIfExists(cb, path, cmd, args, stdin, cmdOpts) {
             var child = spawn(cmd, args, cmdOpts);
             if (stdin) {
                 child.stdin.write(stdin);
-                child.stdin.end();
             }
+            child.stdin.end();
             logCommand(cmd, child);
             child.on('exit', cb);
         }
