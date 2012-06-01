@@ -124,10 +124,11 @@ function gitUpdate(res, section, backgrounded, payload) {
 }
 
 function createRepo(res, section, backgrounded, payload) {
-    var repo = "git://github.com/" + payload.repository.owner.name +
+    var ownerName = payload.repository.owner.name || payload.repository.owner;
+    var repo = "git://github.com/" + ownerName +
         "/" + payload.repository.name + ".git";
     if (payload.repository.private) {
-        repo = "git@github.com:" + payload.repository.owner.name +
+        repo = "git@github.com:" + ownerName +
             "/" + payload.repository.name + ".git";
     }
     var child = spawn(git, ["clone", "--mirror", "--bare", repo, getFullPath(section)]);
