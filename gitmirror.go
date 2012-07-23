@@ -12,6 +12,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
+	"time"
 )
 
 var thePath = flag.String("dir", "/tmp", "working directory")
@@ -21,10 +23,13 @@ type CommandRequest struct {
 	w       http.ResponseWriter
 	abspath string
 	bg      bool
+	after   time.Time
 	cmds    []*exec.Cmd
 }
 
 var reqch = make(chan CommandRequest)
+var updates = map[string]time.Time{}
+var updateLock sync.Mutex
 
 func exists(path string) (rv bool) {
 	rv = true
@@ -76,15 +81,31 @@ func runCommands(w http.ResponseWriter, bg bool,
 	}
 }
 
+func shouldRun(path string, after time.Time) bool {
+	updateLock.Lock()
+	defer updateLock.Unlock()
+
+	lastRun := updates[path]
+	if lastRun.Before(after) {
+		updates[path] = time.Now()
+		return true
+	}
+	return false
+}
+
 func commandRunner() {
 	for r := range reqch {
-		runCommands(r.w, r.bg, r.abspath, r.cmds)
+		if shouldRun(r.abspath, r.after) {
+			runCommands(r.w, r.bg, r.abspath, r.cmds)
+		} else {
+			log.Printf("Skipping redundant update: %v", r.abspath)
+		}
 	}
 }
 
 func queueCommand(w http.ResponseWriter, bg bool,
 	abspath string, cmds []*exec.Cmd) {
-	reqch <- CommandRequest{w, abspath, bg, cmds}
+	reqch <- CommandRequest{w, abspath, bg, time.Now(), cmds}
 }
 
 func updateGit(w http.ResponseWriter, section string,
