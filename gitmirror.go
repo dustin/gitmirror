@@ -25,9 +25,10 @@ type CommandRequest struct {
 	bg      bool
 	after   time.Time
 	cmds    []*exec.Cmd
+	ch      chan bool
 }
 
-var reqch = make(chan CommandRequest)
+var reqch = make(chan CommandRequest, 100)
 var updates = map[string]time.Time{}
 var updateLock sync.Mutex
 
@@ -52,6 +53,7 @@ func runCommands(w http.ResponseWriter, bg bool,
 
 	for _, cmd := range cmds {
 		if exists(cmd.Path) {
+			log.Printf("Running %v", cmd.Args)
 			fmt.Fprintf(stdout, "# Running %v\n", cmd.Args)
 			fmt.Fprintf(stderr, "# Running %v\n", cmd.Args)
 
@@ -72,7 +74,6 @@ func runCommands(w http.ResponseWriter, bg bool,
 	}
 
 	if !bg {
-		w.WriteHeader(200)
 		fmt.Fprintf(w, "---- stdout ----\n")
 		stdout.(*bytes.Buffer).WriteTo(w)
 		fmt.Fprintf(w, "\n----\n\n\n---- stderr ----\n")
@@ -87,29 +88,47 @@ func shouldRun(path string, after time.Time) bool {
 
 	lastRun := updates[path]
 	if lastRun.Before(after) {
-		updates[path] = time.Now()
 		return true
 	}
 	return false
+}
+
+func didRun(path string) {
+	updateLock.Lock()
+	defer updateLock.Unlock()
+	updates[path] = time.Now()
 }
 
 func commandRunner() {
 	for r := range reqch {
 		if shouldRun(r.abspath, r.after) {
 			runCommands(r.w, r.bg, r.abspath, r.cmds)
+			didRun(r.abspath)
 		} else {
 			log.Printf("Skipping redundant update: %v", r.abspath)
+			if !r.bg {
+				fmt.Fprintf(r.w, "Redundant request.")
+			}
+		}
+		select {
+		case r.ch <- true:
+		default:
 		}
 	}
 }
 
 func queueCommand(w http.ResponseWriter, bg bool,
-	abspath string, cmds []*exec.Cmd) {
-	reqch <- CommandRequest{w, abspath, bg, time.Now(), cmds}
+	abspath string, cmds []*exec.Cmd) chan bool {
+	req := CommandRequest{w, abspath, bg, time.Now(),
+		cmds, make(chan bool)}
+	reqch <- req
+	return req.ch
 }
 
 func updateGit(w http.ResponseWriter, section string,
-	bg bool, payload []byte) {
+	bg bool, payload []byte) bool {
+
+	time.Sleep(5 * time.Second)
 
 	abspath := filepath.Join(*thePath, section)
 
@@ -117,7 +136,7 @@ func updateGit(w http.ResponseWriter, section string,
 		if !bg {
 			http.Error(w, "Not found", http.StatusNotFound)
 		}
-		return
+		return false
 	}
 
 	cmds := []*exec.Cmd{
@@ -130,7 +149,7 @@ func updateGit(w http.ResponseWriter, section string,
 	cmds[2].Stdin = bytes.NewBuffer(payload)
 	cmds[3].Stdin = bytes.NewBuffer(payload)
 
-	queueCommand(w, bg, abspath, cmds)
+	return <-queueCommand(w, bg, abspath, cmds)
 }
 
 func getPath(req *http.Request) string {
@@ -175,6 +194,9 @@ func createRepo(w http.ResponseWriter, section string,
 			filepath.Join(*thePath, section)),
 	}
 
+	if bg {
+		w.WriteHeader(201)
+	}
 	runCommands(w, bg, "/tmp", cmds)
 }
 
@@ -190,7 +212,6 @@ func doUpdate(w http.ResponseWriter, path string,
 
 func handleGet(w http.ResponseWriter, req *http.Request, bg bool) {
 	path := getPath(req)
-	log.Printf("Path for %v is %#v", req.URL.Path, path)
 	doUpdate(w, path, bg, []byte{})
 }
 
