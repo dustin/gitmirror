@@ -247,6 +247,8 @@ func handleReq(w http.ResponseWriter, req *http.Request) {
 func main() {
 	flag.Parse()
 
+	log.SetFlags(log.Lmicroseconds)
+
 	go commandRunner()
 
 	http.HandleFunc("/", handleReq)
