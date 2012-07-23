@@ -17,6 +17,15 @@ import (
 var thePath = flag.String("dir", "/tmp", "working directory")
 var git = flag.String("git", "/usr/bin/git", "path to git")
 
+type CommandRequest struct {
+	w       http.ResponseWriter
+	abspath string
+	bg      bool
+	cmds    []*exec.Cmd
+}
+
+var reqch = make(chan CommandRequest)
+
 func exists(path string) (rv bool) {
 	rv = true
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -67,6 +76,17 @@ func runCommands(w http.ResponseWriter, bg bool,
 	}
 }
 
+func commandRunner() {
+	for r := range reqch {
+		runCommands(r.w, r.bg, r.abspath, r.cmds)
+	}
+}
+
+func queueCommand(w http.ResponseWriter, bg bool,
+	abspath string, cmds []*exec.Cmd) {
+	reqch <- CommandRequest{w, abspath, bg, cmds}
+}
+
 func updateGit(w http.ResponseWriter, section string,
 	bg bool, payload []byte) {
 
@@ -89,7 +109,7 @@ func updateGit(w http.ResponseWriter, section string,
 	cmds[2].Stdin = bytes.NewBuffer(payload)
 	cmds[3].Stdin = bytes.NewBuffer(payload)
 
-	runCommands(w, bg, abspath, cmds)
+	queueCommand(w, bg, abspath, cmds)
 }
 
 func getPath(req *http.Request) string {
@@ -184,6 +204,8 @@ func handleReq(w http.ResponseWriter, req *http.Request) {
 
 func main() {
 	flag.Parse()
+
+	go commandRunner()
 
 	http.HandleFunc("/", handleReq)
 	http.HandleFunc("/favicon.ico",
