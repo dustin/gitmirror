@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sync"
 	"time"
 )
 
@@ -30,7 +29,6 @@ type CommandRequest struct {
 
 var reqch = make(chan CommandRequest, 100)
 var updates = map[string]time.Time{}
-var updateLock sync.Mutex
 
 func exists(path string) (rv bool) {
 	rv = true
@@ -83,9 +81,6 @@ func runCommands(w http.ResponseWriter, bg bool,
 }
 
 func shouldRun(path string, after time.Time) bool {
-	updateLock.Lock()
-	defer updateLock.Unlock()
-
 	lastRun := updates[path]
 	if lastRun.Before(after) {
 		return true
@@ -94,8 +89,6 @@ func shouldRun(path string, after time.Time) bool {
 }
 
 func didRun(path string) {
-	updateLock.Lock()
-	defer updateLock.Unlock()
 	updates[path] = time.Now()
 }
 
