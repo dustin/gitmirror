@@ -162,7 +162,7 @@ func createRepo(w http.ResponseWriter, section string,
 	p := struct {
 		Repository struct {
 			Owner   interface{}
-			Private int
+			Private bool
 			Name    string
 		}
 	}{}
@@ -184,7 +184,7 @@ func createRepo(w http.ResponseWriter, section string,
 
 	repo := fmt.Sprintf("git://github.com/%v/%v.git",
 		ownerName, p.Repository.Name)
-	if p.Repository.Private == 1 {
+	if p.Repository.Private {
 		repo = fmt.Sprintf("git@github.com:%v/%v.git",
 			ownerName, p.Repository.Name)
 	}
