@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"text/template"
 
@@ -33,6 +35,20 @@ type Hook struct {
 	Events []string               `json:"events,omitempty"`
 	Active bool                   `json:"active"`
 	Config map[string]interface{} `json:"config"`
+}
+
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage:\n%s [opts]\n", os.Args[0])
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nTemplate parameters:\n"+
+			" {{.Id}} - Numeric ID of repository\n"+
+			" {{.Owner.Login}} - Github username of the repo owner\n"+
+			" {{.Owner.Id}} - Numeric ID of the repo owner\n"+
+			" {{.Name}} - short name of the repo (e.g. gitmirror)\n"+
+			" {{.FullName}} - full name of the repo (e.g. dustin/gitmirror)\n"+
+			" {{.Language}} - repository language (if detected)\n")
+	}
 }
 
 func (h Hook) Test(r Repo) {
