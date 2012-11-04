@@ -15,6 +15,9 @@ const base = "https://api.github.com"
 
 var username = flag.String("user", "", "Your github username")
 var password = flag.String("pass", "", "Your github password")
+var org = flag.String("org", "", "Organization to check")
+var noop = flag.Bool("n", false, "If true, don't make any hook changes")
+
 var tmplStr = flag.String("template",
 	"http://example.com/gitmirror/{{.Owner.Login}}/{{.Name}}.git",
 	"Gitmirror dest url pattern")
@@ -38,7 +41,7 @@ type Repo struct {
 	}
 	Name     string
 	FullName string `json:"full_name"`
-	Language string
+	Language *string
 }
 
 func maybeFatal(m string, err error) {
@@ -70,7 +73,11 @@ func getJSON(name, subu string, out interface{}) {
 
 func listRepos() []Repo {
 	rv := []Repo{}
-	getJSON("repo list", "/user/repos?type=owner", &rv)
+	u := "/user/repos?type=owner"
+	if *org != "" {
+		u = "/orgs/" + *org + "/repos"
+	}
+	getJSON("repo list", u, &rv)
 	return rv
 }
 
@@ -132,8 +139,10 @@ func updateHooks(r Repo) {
 		return
 	}
 
-	log.Printf("Setting up %v", r)
-	createHook(r)
+	log.Printf("Setting up %v", r.FullName)
+	if !*noop {
+		createHook(r)
+	}
 }
 
 func main() {
