@@ -7,10 +7,9 @@
     <string>net.spy.gitmirror</string>
     <key>ProgramArguments</key>
     <array>
-      <string>/usr/local/bin/node</string>
-      <string>/Users/dustin/prog/gitmirror/gitmirror.js</string>
-      <string>/usr/local/bin/git</string>
-      <string>/Volumes/terror/git</string>
+      <string>/Users/dustin/go/bin/gitmirror</string>
+      <string>-git=/usr/local/bin/git</string>
+      <string>-dir=/Volumes/terror/git</string>
     </array>
     <key>WorkingDirectory</key>
     <string>/</string>

@@ -5,9 +5,6 @@ wanted to make sure these things stay up-to-date.  Some repos are on
 github, some are on other machines around the internet.  They all look
 the same here.
 
-It's also my first attempt at playing with [node.js][node].  Killed
-two birds with one stone†.
-
 # How Do I Use This?
 
 ## Setting Up a Repo Path
@@ -28,12 +25,13 @@ sure the default directory is there.
 
 ## Getting gitmirror Running
 
-Now install [node.js][node] and get this junk (see the clone
-instructions at the top).
+gitmirror is a standalone web server written in [go][golang].  It's
+been tested on several platforms, but I mostly use it on Linux and
+MacOS X.
 
-You can run it interactively like this:
+Once you have your `gitmirror` binary built, you run it like this:
 
-    node gitmirror.js /path/to/git /tmp/gitmirrors
+    /path/to/gitmirror -git=/path/to/git -dir=/toplevel/git/dir
 
 ## Trying it Out
 
@@ -92,10 +90,7 @@ allowing you to have a common behavior across all updates (e.g. you
 might want to `touch 'git-daemon-export-ok'` or post something to
 twitter or chain a different hook or something.
 
-----
-† No animals were harmed in the making of this software.
-
-[node]: http://nodejs.org/
+[golang]: http://golang.org/
 [launchd]: http://developer.apple.com/macosx/launchd.html
 [curl]: http://curl.haxx.se/
 [startup]: http://dustin.github.com/2010/02/28/running-processes.html
