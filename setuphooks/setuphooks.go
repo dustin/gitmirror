@@ -8,7 +8,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
+	"text/tabwriter"
 	"text/template"
 
 	"github.com/dustin/go-jsonpointer"
@@ -21,10 +23,6 @@ var password = flag.String("pass", "", "Your github password")
 var org = flag.String("org", "", "Organization to check")
 var noop = flag.Bool("n", false, "If true, don't make any hook changes")
 var test = flag.Bool("t", false, "Test all hooks")
-
-var tmplStr = flag.String("template",
-	"http://example.com/gitmirror/{{.Owner.Login}}/{{.Name}}.git",
-	"Gitmirror dest url pattern")
 
 var tmpl *template.Template
 
@@ -39,15 +37,34 @@ type Hook struct {
 
 func init() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage:\n%s [opts]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage:\n%s [opts] template\n\nOptions:\n",
+			os.Args[0])
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nTemplate parameters:\n"+
-			" {{.Id}} - Numeric ID of repository\n"+
-			" {{.Owner.Login}} - Github username of the repo owner\n"+
-			" {{.Owner.Id}} - Numeric ID of the repo owner\n"+
-			" {{.Name}} - short name of the repo (e.g. gitmirror)\n"+
-			" {{.FullName}} - full name of the repo (e.g. dustin/gitmirror)\n"+
-			" {{.Language}} - repository language (if detected)\n")
+		tdoc := map[string]string{
+			"{{.Id}}":          "numeric ID of repo",
+			"{{.Owner.Login}}": "github username of repo owner",
+			"{{.Owner.Id}}":    "github numeric id of repo owner",
+			"{{.Name}}":        "short name of repo (e.g. gitmirror)",
+			"{{.FullName}}":    "full name of repo (e.g. dustin/gitmirror)",
+			"{{.Language}}":    "repository language (if detected)",
+		}
+
+		a := sort.StringSlice{}
+		for k := range tdoc {
+			a = append(a, k)
+		}
+		a.Sort()
+
+		fmt.Fprintf(os.Stderr, "\nTemplate parameters:\n")
+		tw := tabwriter.NewWriter(os.Stderr, 8, 4, 2, ' ', 0)
+		for _, k := range a {
+			fmt.Fprintf(tw, "  %v\t- %v\n", k, tdoc[k])
+		}
+		tw.Flush()
+		fmt.Fprintf(os.Stderr, "\nExample templates:\n"+
+			"  http://example.com/gitmirror/{{.FullName}}.git\n"+
+			"  http://example.com/gitmirror/{{.Owner.Login}}/{{.Language}}/{{.Name}}.git\n"+
+			"  http://example.com/gitmirror/{{.Name}}.git\n")
 	}
 }
 
@@ -188,7 +205,12 @@ func updateHooks(r Repo) {
 func main() {
 	flag.Parse()
 
-	t, err := template.New("u").Parse(*tmplStr)
+	if flag.NArg() < 1 {
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	t, err := template.New("u").Parse(flag.Arg(0))
 	maybeFatal("parsing template", err)
 	tmpl = t
 
