@@ -81,6 +81,9 @@ func runCommands(w http.ResponseWriter, bg bool,
 }
 
 func shouldRun(path string, after time.Time) bool {
+	if path == "/tmp" {
+		return true
+	}
 	lastRun := updates[path]
 	if lastRun.Before(after) {
 		return true
