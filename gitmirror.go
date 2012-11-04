@@ -197,7 +197,7 @@ func createRepo(w http.ResponseWriter, section string,
 	if bg {
 		w.WriteHeader(201)
 	}
-	runCommands(w, bg, "/tmp", cmds)
+	queueCommand(w, true, "/tmp", cmds)
 }
 
 func doUpdate(w http.ResponseWriter, path string,
