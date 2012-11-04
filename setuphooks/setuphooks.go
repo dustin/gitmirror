@@ -6,6 +6,7 @@ import (
 	"flag"
 	"log"
 	"net/http"
+	"strconv"
 	"text/template"
 
 	"github.com/dustin/go-jsonpointer"
@@ -17,6 +18,7 @@ var username = flag.String("user", "", "Your github username")
 var password = flag.String("pass", "", "Your github password")
 var org = flag.String("org", "", "Organization to check")
 var noop = flag.Bool("n", false, "If true, don't make any hook changes")
+var test = flag.Bool("t", false, "Test all hooks")
 
 var tmplStr = flag.String("template",
 	"http://example.com/gitmirror/{{.Owner.Login}}/{{.Name}}.git",
@@ -31,6 +33,22 @@ type Hook struct {
 	Events []string               `json:"events,omitempty"`
 	Active bool                   `json:"active"`
 	Config map[string]interface{} `json:"config"`
+}
+
+func (h Hook) Test(r Repo) {
+	log.Printf("Testing %v -> %v", r.FullName,
+		jsonpointer.Get(h.Config, "/url"))
+	u := base + "/repos/" + r.FullName + "/hooks/" +
+		strconv.Itoa(h.ID) + "/test"
+
+	req, err := http.NewRequest("POST", u, nil)
+	maybeFatal("hook test", err)
+
+	req.SetBasicAuth(*username, *password)
+	res, err := http.DefaultClient.Do(req)
+	maybeFatal("hook test", err)
+	maybeHTTPFatal("hook test", 204, res)
+	defer res.Body.Close()
 }
 
 type Repo struct {
@@ -101,13 +119,14 @@ func hasMirror(repo Repo, hooks []Hook) bool {
 	for _, h := range hooks {
 		if h.Name == "web" && contains(h.Events, "push") &&
 			jsonpointer.Get(h.Config, "/url") == u {
+			h.Test(repo)
 			return true
 		}
 	}
 	return false
 }
 
-func createHook(r Repo) {
+func createHook(r Repo) Hook {
 	h := Hook{
 		Name:   "web",
 		Active: true,
@@ -129,6 +148,11 @@ func createHook(r Repo) {
 	maybeFatal("creating hook", err)
 	maybeHTTPFatal("creating hook", 201, res)
 	defer res.Body.Close()
+
+	rv := Hook{}
+	d := json.NewDecoder(res.Body)
+	maybeFatal("creating hook", d.Decode(&rv))
+	return rv
 }
 
 func updateHooks(r Repo) {
@@ -141,7 +165,7 @@ func updateHooks(r Repo) {
 
 	log.Printf("Setting up %v", r.FullName)
 	if !*noop {
-		createHook(r)
+		createHook(r).Test(r)
 	}
 }
 
