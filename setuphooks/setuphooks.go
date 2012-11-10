@@ -152,7 +152,9 @@ func hasMirror(repo Repo, hooks []Hook) bool {
 	for _, h := range hooks {
 		if h.Name == "web" && contains(h.Events, "push") &&
 			jsonpointer.Get(h.Config, "/url") == u {
-			h.Test(repo)
+			if *test {
+				h.Test(repo)
+			}
 			return true
 		}
 	}
