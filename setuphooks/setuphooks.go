@@ -10,6 +10,7 @@ import (
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"text/tabwriter"
 	"text/template"
 
@@ -107,8 +108,32 @@ func maybeHTTPFatal(m string, exp int, res *http.Response) {
 	}
 }
 
-func getJSON(name, subu string, out interface{}) {
-	req, err := http.NewRequest("GET", base+subu, nil)
+func parseLink(s string) map[string]string {
+	rv := map[string]string{}
+	if s == "" {
+		return rv
+	}
+	for _, link := range strings.Split(s, ", ") {
+		parts := strings.Split(link, "; ")
+		u := parts[0][1 : len(parts[0])-1]
+
+		if !strings.HasPrefix(parts[1], `rel="`) {
+			panic("Unexpected: " + link)
+		}
+
+		rv[parts[1][5:len(parts[1])-1]] = u
+	}
+	return rv
+}
+
+// Parses json stuff into a thing.  Returns the next URL if any
+func getJSON(name, subu string, out interface{}) string {
+	u := subu
+	if !strings.HasPrefix(u, "http") {
+		u = base + subu
+	}
+
+	req, err := http.NewRequest("GET", u, nil)
 	maybeFatal(name, err)
 
 	req.SetBasicAuth(*username, *password)
@@ -117,18 +142,35 @@ func getJSON(name, subu string, out interface{}) {
 	maybeHTTPFatal(name, 200, res)
 	defer res.Body.Close()
 
+	links := parseLink(res.Header.Get("Link"))
+
 	d := json.NewDecoder(res.Body)
 
 	maybeFatal(name, d.Decode(out))
+
+	return links["next"]
 }
 
-func listRepos() []Repo {
-	rv := []Repo{}
-	u := "/user/repos?type=owner"
-	if *org != "" {
-		u = "/orgs/" + *org + "/repos"
-	}
-	getJSON("repo list", u, &rv)
+func listRepos() chan Repo {
+	rv := make(chan Repo)
+
+	go func() {
+		defer close(rv)
+		next := "/user/repos?type=owner"
+		if *org != "" {
+			next = "/orgs/" + *org + "/repos"
+		}
+
+		for next != "" {
+			repos := []Repo{}
+			log.Printf("Fetching repos from %v", next)
+			next = getJSON("repo list", next, &repos)
+
+			for _, r := range repos {
+				rv <- r
+			}
+		}
+	}()
 	return rv
 }
 
@@ -218,7 +260,7 @@ func main() {
 
 	repos := listRepos()
 
-	for _, r := range repos {
+	for r := range repos {
 		updateHooks(r)
 	}
 }
