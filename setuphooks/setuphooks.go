@@ -24,6 +24,7 @@ var password = flag.String("pass", "", "Your github password")
 var org = flag.String("org", "", "Organization to check")
 var noop = flag.Bool("n", false, "If true, don't make any hook changes")
 var test = flag.Bool("t", false, "Test all hooks")
+var del = flag.Bool("d", false, "Delete, instead of adding a hook.")
 
 var tmpl *template.Template
 
@@ -189,7 +190,7 @@ func contains(haystack []string, needle string) bool {
 	return false
 }
 
-func hasMirror(repo Repo, hooks []Hook) bool {
+func mirrorId(repo Repo, hooks []Hook) int {
 	u := mirrorFor(repo)
 	for _, h := range hooks {
 		if h.Name == "web" && contains(h.Events, "push") &&
@@ -197,10 +198,10 @@ func hasMirror(repo Repo, hooks []Hook) bool {
 			if *test {
 				h.Test(repo)
 			}
-			return true
+			return h.ID
 		}
 	}
-	return false
+	return -1
 }
 
 func createHook(r Repo) Hook {
@@ -232,17 +233,47 @@ func createHook(r Repo) Hook {
 	return rv
 }
 
+func teardown(id int, r Repo) {
+	req, err := http.NewRequest("DELETE",
+		fmt.Sprintf("%v/repos/%v/hooks/%v",
+			base, r.FullName, id),
+		nil)
+	maybeFatal("deleting hook", err)
+
+	req.SetBasicAuth(*username, *password)
+	res, err := http.DefaultClient.Do(req)
+	maybeFatal("creating hook", err)
+	maybeHTTPFatal("creating hook", 204, res)
+	res.Body.Close()
+}
+
+func setup(id int, r Repo) {
+	createHook(r).Test(r)
+}
+
 func updateHooks(r Repo) {
 	hooks := []Hook{}
 	getJSON(r.FullName, "/repos/"+r.FullName+"/hooks", &hooks)
+	actions := map[string]func(int, Repo){
+		"setup":    setup,
+		"teardown": teardown,
+	}
 
-	if hasMirror(r, hooks) {
+	action := "setup"
+
+	id := mirrorId(r, hooks)
+	switch {
+	case id >= 0 && *del:
+		action = "teardown"
+	case id == -1 && !*del:
+		action = "setup"
+	default:
 		return
 	}
 
-	log.Printf("Setting up %v", r.FullName)
+	log.Printf("Updating %v (%v)", r.FullName, action)
 	if !*noop {
-		createHook(r).Test(r)
+		actions[action](id, r)
 	}
 }
 
