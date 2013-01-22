@@ -27,6 +27,7 @@ var test = flag.Bool("t", false, "Test all hooks")
 var del = flag.Bool("d", false, "Delete, instead of adding a hook.")
 var events = flag.String("events", "push", "Comma separated list of events")
 var repo = flag.String("repo", "", "Specific repo (default: all)")
+var verbose = flag.Bool("v", false, "Print more stuff")
 
 var tmpl *template.Template
 
@@ -269,6 +270,13 @@ func updateHooks(r Repo) {
 	actions := map[string]func(int, Repo){
 		"setup":    setup,
 		"teardown": teardown,
+	}
+
+	if *verbose {
+		for _, h := range hooks {
+			log.Printf("%v/%v/active=%v - %v",
+				h.Name, h.Events, h.Active, h.Config)
+		}
 	}
 
 	action := "setup"
