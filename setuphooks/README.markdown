@@ -1,6 +1,13 @@
 setuphooks is a commandline tool to set up github to notify gitmirror
 when a repository has changed.
 
+This tool is written in [go][go].  To install it (assuming you have your go
+environment configured properly):
+
+    go get github.com/dustin/gitmirror/setuphooks
+
+# Usage
+
 ```
 Usage:
 ./setuphooks [opts] template
@@ -28,3 +35,5 @@ Example templates:
   http://example.com/gitmirror/{{.Owner.Login}}/{{.Language}}/{{.Name}}.git
   http://example.com/gitmirror/{{.Name}}.git
 ```
+
+[go]: http://golang.org/
