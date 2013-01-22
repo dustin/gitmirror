@@ -1,5 +1,15 @@
-setuphooks is a commandline tool to set up github to notify gitmirror
-when a repository has changed.
+setuphooks is a commandline tool to set up github webhooks on
+repositories in bulk.
+
+You can use it to add or remove a webhook destination to all of your
+personal repositories, repositories in any specific org you have
+access to, or individual repositories.
+
+Hooks can be specified statically, or with a pattern (as I have
+different individual hooks for gitmirror for every repo, but they're
+all built roughly the same way).
+
+# Installation
 
 This tool is written in [go][go].  To install it (assuming you have your go
 environment configured properly):
