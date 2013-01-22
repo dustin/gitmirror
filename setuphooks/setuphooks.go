@@ -23,7 +23,8 @@ var username = flag.String("user", "", "Your github username")
 var password = flag.String("pass", "", "Your github password")
 var org = flag.String("org", "", "Organization to check")
 var noop = flag.Bool("n", false, "If true, don't make any hook changes")
-var test = flag.Bool("t", false, "Test all hooks")
+var test = flag.Bool("t", false, "Test hooks when creating them")
+var testAll = flag.Bool("T", false, "Test all hooks")
 var del = flag.Bool("d", false, "Delete, instead of adding a hook.")
 var events = flag.String("events", "push", "Comma separated list of events")
 var repo = flag.String("repo", "", "Specific repo (default: all)")
@@ -208,7 +209,7 @@ func mirrorId(r Repo, hooks []Hook) int {
 		if h.Name == "web" && jsonpointer.Get(h.Config, "/url") == u &&
 			(*events == "" ||
 				containsAll(h.Events, strings.Split(*events, ","))) {
-			if *test {
+			if *testAll {
 				h.Test(r)
 			}
 			return h.ID
@@ -261,7 +262,10 @@ func teardown(id int, r Repo) {
 }
 
 func setup(id int, r Repo) {
-	createHook(r).Test(r)
+	h := createHook(r)
+	if *test {
+		h.Test(r)
+	}
 }
 
 func updateHooks(r Repo) {
