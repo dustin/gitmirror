@@ -20,17 +20,19 @@ environment configured properly):
 
 ```
 Usage:
-./setuphooks [opts] template
+./setuphooks/setuphooks.mac [opts] template
 
 Options:
+  -T=false: Test all hooks
   -d=false: Delete, instead of adding a hook.
-  -events="push": Comma separated list of events (or default)
+  -events="push": Comma separated list of events
   -n=false: If true, don't make any hook changes
   -org="": Organization to check
   -pass="": Your github password
   -repo="": Specific repo (default: all)
-  -t=false: Test all hooks
+  -t=false: Test hooks when creating them
   -user="": Your github username
+  -v=false: Print more stuff
 
 Template parameters:
   {{.FullName}}     - full name of repo (e.g. dustin/gitmirror)
