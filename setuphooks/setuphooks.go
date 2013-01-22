@@ -25,6 +25,8 @@ var org = flag.String("org", "", "Organization to check")
 var noop = flag.Bool("n", false, "If true, don't make any hook changes")
 var test = flag.Bool("t", false, "Test all hooks")
 var del = flag.Bool("d", false, "Delete, instead of adding a hook.")
+var events = flag.String("e", "push", "Comma separated list of events (or default)")
+var repo = flag.String("r", "", "Specific repo (default: all)")
 
 var tmpl *template.Template
 
@@ -175,9 +177,9 @@ func listRepos() chan Repo {
 	return rv
 }
 
-func mirrorFor(repo Repo) string {
+func mirrorFor(r Repo) string {
 	b := bytes.Buffer{}
-	maybeFatal("executing template", tmpl.Execute(&b, repo))
+	maybeFatal("executing template", tmpl.Execute(&b, r))
 	return b.String()
 }
 
@@ -190,13 +192,23 @@ func contains(haystack []string, needle string) bool {
 	return false
 }
 
-func mirrorId(repo Repo, hooks []Hook) int {
-	u := mirrorFor(repo)
+func containsAll(haystack, needles []string) bool {
+	for _, n := range needles {
+		if !contains(haystack, n) {
+			return false
+		}
+	}
+	return true
+}
+
+func mirrorId(r Repo, hooks []Hook) int {
+	u := mirrorFor(r)
 	for _, h := range hooks {
-		if h.Name == "web" && contains(h.Events, "push") &&
-			jsonpointer.Get(h.Config, "/url") == u {
+		if h.Name == "web" && jsonpointer.Get(h.Config, "/url") == u &&
+			(*events == "" ||
+				containsAll(h.Events, strings.Split(*events, ","))) {
 			if *test {
-				h.Test(repo)
+				h.Test(r)
 			}
 			return h.ID
 		}
@@ -208,7 +220,7 @@ func createHook(r Repo) Hook {
 	h := Hook{
 		Name:   "web",
 		Active: true,
-		Events: []string{"push"},
+		Events: strings.Split(*events, ","),
 		Config: map[string]interface{}{"url": mirrorFor(r)},
 	}
 	body, err := json.Marshal(&h)
@@ -277,6 +289,21 @@ func updateHooks(r Repo) {
 	}
 }
 
+func getRepo(name string) Repo {
+	rv := Repo{}
+	parts := strings.Split(name, "/")
+	if len(parts) == 1 {
+		rv.FullName = *username + "/" + parts[0]
+		rv.Name = parts[0]
+		rv.Owner.Login = *username
+	} else {
+		rv.FullName = parts[0] + "/" + parts[1]
+		rv.Name = parts[1]
+		rv.Owner.Login = parts[0]
+	}
+	return rv
+}
+
 func main() {
 	flag.Parse()
 
@@ -289,9 +316,11 @@ func main() {
 	maybeFatal("parsing template", err)
 	tmpl = t
 
-	repos := listRepos()
-
-	for r := range repos {
-		updateHooks(r)
+	if *repo == "" {
+		for r := range listRepos() {
+			updateHooks(r)
+		}
+	} else {
+		updateHooks(getRepo(*repo))
 	}
 }
