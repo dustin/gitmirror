@@ -25,8 +25,8 @@ var org = flag.String("org", "", "Organization to check")
 var noop = flag.Bool("n", false, "If true, don't make any hook changes")
 var test = flag.Bool("t", false, "Test all hooks")
 var del = flag.Bool("d", false, "Delete, instead of adding a hook.")
-var events = flag.String("e", "push", "Comma separated list of events (or default)")
-var repo = flag.String("r", "", "Specific repo (default: all)")
+var events = flag.String("events", "push", "Comma separated list of events")
+var repo = flag.String("repo", "", "Specific repo (default: all)")
 
 var tmpl *template.Template
 

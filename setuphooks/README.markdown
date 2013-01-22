@@ -7,11 +7,11 @@ Usage:
 
 Options:
   -d=false: Delete, instead of adding a hook.
-  -e="push": Comma separated list of events (or default)
+  -events="push": Comma separated list of events (or default)
   -n=false: If true, don't make any hook changes
   -org="": Organization to check
   -pass="": Your github password
-  -r="": Specific repo (default: all)
+  -repo="": Specific repo (default: all)
   -t=false: Test all hooks
   -user="": Your github username
 
