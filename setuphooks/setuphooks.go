@@ -277,9 +277,14 @@ func updateHooks(r Repo) {
 	}
 
 	if *verbose {
+		fmt.Printf("Hooks for %v:\n", r.FullName)
 		for _, h := range hooks {
-			log.Printf("%v/%v/active=%v - %v",
-				h.Name, h.Events, h.Active, h.Config)
+			conf := ""
+			for k, v := range h.Config {
+				conf += fmt.Sprintf("\n\t%v = %v", k, v)
+			}
+			fmt.Printf("%v: %v active=%v -%v\n\n",
+				h.Name, h.Events, h.Active, conf)
 		}
 	}
 
@@ -317,14 +322,19 @@ func getRepo(name string) Repo {
 }
 
 func main() {
+	log.SetFlags(0)
 	flag.Parse()
 
-	if flag.NArg() < 1 {
-		flag.Usage()
-		os.Exit(1)
+	var tmplText = ""
+	if flag.NArg() > 0 {
+		tmplText = flag.Arg(0)
+	} else {
+		log.Printf("No template given, just listing")
+		*noop = true
+		*verbose = true
 	}
 
-	t, err := template.New("u").Parse(flag.Arg(0))
+	t, err := template.New("u").Parse(tmplText)
 	maybeFatal("parsing template", err)
 	tmpl = t
 
