@@ -119,7 +119,7 @@ func commandRunner() {
 	for r := range reqch {
 		ch, running := m[r.abspath]
 		if !running {
-			ch = make(chan CommandRequest)
+			ch = make(chan CommandRequest, 10)
 			m[r.abspath] = ch
 			go pathRunner(ch)
 		}
