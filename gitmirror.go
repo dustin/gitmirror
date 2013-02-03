@@ -95,8 +95,8 @@ func didRun(path string) {
 	updates[path] = time.Now()
 }
 
-func commandRunner() {
-	for r := range reqch {
+func pathRunner(ch chan CommandRequest) {
+	for r := range ch {
 		if shouldRun(r.abspath, r.after) {
 			runCommands(r.w, r.bg, r.abspath, r.cmds)
 			didRun(r.abspath)
@@ -110,6 +110,20 @@ func commandRunner() {
 		case r.ch <- true:
 		default:
 		}
+	}
+}
+
+func commandRunner() {
+	m := map[string]chan CommandRequest{}
+
+	for r := range reqch {
+		ch, running := m[r.abspath]
+		if !running {
+			ch = make(chan CommandRequest)
+			m[r.abspath] = ch
+			go pathRunner(ch)
+		}
+		ch <- r
 	}
 }
 
