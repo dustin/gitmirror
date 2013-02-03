@@ -213,10 +213,10 @@ func createRepo(w http.ResponseWriter, section string,
 func doUpdate(w http.ResponseWriter, path string,
 	bg bool, payload []byte) {
 	if bg {
-		go updateGit(w, path, bg, []byte{})
+		go updateGit(w, path, bg, payload)
 		w.WriteHeader(201)
 	} else {
-		updateGit(w, path, bg, []byte{})
+		updateGit(w, path, bg, payload)
 	}
 }
 
