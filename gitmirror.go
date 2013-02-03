@@ -51,7 +51,7 @@ func runCommands(w http.ResponseWriter, bg bool,
 
 	for _, cmd := range cmds {
 		if exists(cmd.Path) {
-			log.Printf("Running %v", cmd.Args)
+			log.Printf("Running %v in %v", cmd.Args, abspath)
 			fmt.Fprintf(stdout, "# Running %v\n", cmd.Args)
 			fmt.Fprintf(stderr, "# Running %v\n", cmd.Args)
 
@@ -61,7 +61,8 @@ func runCommands(w http.ResponseWriter, bg bool,
 			err := cmd.Run()
 
 			if err != nil {
-				log.Printf("Error running command:  %v", err)
+				log.Printf("Error running %v in %v:  %v",
+					cmd.Args, abspath, err)
 				if !bg {
 					fmt.Fprintf(stderr,
 						"\n[gitmirror internal error:  %v]\n", err)
