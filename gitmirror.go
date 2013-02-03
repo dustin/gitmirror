@@ -153,7 +153,7 @@ func updateGit(w http.ResponseWriter, section string,
 		exec.Command(*git, "remote", "update", "-p"),
 		exec.Command(*git, "gc", "--auto"),
 		exec.Command(filepath.Join(abspath, "hooks/post-fetch")),
-		exec.Command("bin/post-fetch"),
+		exec.Command(filepath.Join(*thePath, "bin/post-fetch")),
 	}
 
 	cmds[2].Stdin = bytes.NewBuffer(payload)
