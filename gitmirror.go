@@ -92,15 +92,16 @@ func shouldRun(path string, after time.Time) bool {
 	return false
 }
 
-func didRun(path string) {
-	updates[path] = time.Now()
+func didRun(path string, t time.Time) {
+	updates[path] = t
 }
 
 func pathRunner(ch chan CommandRequest) {
 	for r := range ch {
 		if shouldRun(r.abspath, r.after) {
+			t := time.Now()
 			runCommands(r.w, r.bg, r.abspath, r.cmds)
-			didRun(r.abspath)
+			didRun(r.abspath, t)
 		} else {
 			log.Printf("Skipping redundant update: %v", r.abspath)
 			if !r.bg {
