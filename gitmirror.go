@@ -86,10 +86,7 @@ func shouldRun(path string, after time.Time) bool {
 		return true
 	}
 	lastRun := updates[path]
-	if lastRun.Before(after) {
-		return true
-	}
-	return false
+	return lastRun.Before(after)
 }
 
 func didRun(path string, t time.Time) {
