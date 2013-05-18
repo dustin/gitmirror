@@ -224,7 +224,7 @@ func doUpdate(w http.ResponseWriter, path string,
 
 func handleGet(w http.ResponseWriter, req *http.Request, bg bool) {
 	path := getPath(req)
-	doUpdate(w, path, bg, []byte{})
+	doUpdate(w, path, bg, nil)
 }
 
 func handlePost(w http.ResponseWriter, req *http.Request, bg bool) {
