@@ -11,11 +11,20 @@ the same here.
 
 First, you'll need stuff for it to do.  Let's say we wanted to set up
 a repository mirror location in `/tmp/gitmirrors` and our first mirror
-will be of my awesome `gitmirror` project.  We'll do the following:
+will be of my awesome `gitmirror` project.
+
+First, install the software:
+
+    go get github.com/dustin/gitmirror
+
+Now, create a location for your mirrors and (as an example), check out
+the gitmirror source into it:
 
     mkdir /tmp/gitmirrors
     cd /tmp/gitmirrors
-    git clone --bare --mirror git://github.com/dustin/gitmirror.git
+    git clone git://github.com/dustin/gitmirror
+
+(note, don't actually use `/tmp/` as your permanent mirror path)
 
 ### Note for Github Usage
 
@@ -29,9 +38,10 @@ gitmirror is a standalone web server written in [go][golang].  It's
 been tested on several platforms, but I mostly use it on Linux and
 MacOS X.
 
-Once you have your `gitmirror` binary built, you run it like this:
+Once you have your `gitmirror` binary built (Which happens
+automatically with the `go get` command above), you run it like this:
 
-    /path/to/gitmirror -git=/path/to/git -dir=/toplevel/git/dir
+    /path/to/gitmirror -git=/path/to/git -dir=/tmp/gitmirrors
 
 ## Trying it Out
 
@@ -90,7 +100,15 @@ allowing you to have a common behavior across all updates (e.g. you
 might want to `touch 'git-daemon-export-ok'` or post something to
 twitter or chain a different hook or something.
 
+### Batches of Hooks
+
+If you have a ton of hooks to set up, check out the
+[setuphooks][setuphooks] command.  It works great for hundreds of
+repos with simple patterns to express how you want them to map to your
+mirror.
+
 [golang]: http://golang.org/
 [launchd]: http://developer.apple.com/macosx/launchd.html
 [curl]: http://curl.haxx.se/
 [startup]: http://dustin.github.com/2010/02/28/running-processes.html
+[setuphooks]: gitmirror/tree/master/setuphooks
