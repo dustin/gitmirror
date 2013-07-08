@@ -74,6 +74,34 @@ func init() {
 	}
 }
 
+func retryableHTTP(name string, st int, req *http.Request, jd interface{}) {
+	var err error
+	for i := 0; i < 3; i++ {
+		if i > 0 {
+			log.Printf("Retrying %v to %v", req.Method, req.URL)
+		}
+
+		var res *http.Response
+		res, err = http.DefaultClient.Do(req)
+		if err != nil {
+			continue
+		}
+		defer res.Body.Close()
+		if res.StatusCode == st {
+			if jd != nil {
+				d := json.NewDecoder(res.Body)
+				err = d.Decode(jd)
+				if err != nil {
+					continue
+				}
+			}
+			return
+		}
+		err = fmt.Errorf("HTTP Error: %v", res.Status)
+	}
+	log.Fatalf("Couldn't do %v against %s: %v", req.Method, req.URL, err)
+}
+
 func (h Hook) Test(r Repo) {
 	log.Printf("Testing %v -> %v", r.FullName,
 		jsonpointer.Get(h.Config, "/url"))
@@ -84,10 +112,7 @@ func (h Hook) Test(r Repo) {
 	maybeFatal("hook test", err)
 
 	req.SetBasicAuth(*username, *password)
-	res, err := http.DefaultClient.Do(req)
-	maybeFatal("hook test", err)
-	maybeHTTPFatal("hook test", 204, res)
-	defer res.Body.Close()
+	retryableHTTP("hook test", 204, req, nil)
 }
 
 type Repo struct {
@@ -104,12 +129,6 @@ type Repo struct {
 func maybeFatal(m string, err error) {
 	if err != nil {
 		log.Fatalf("%s: %v", m, err)
-	}
-}
-
-func maybeHTTPFatal(m string, exp int, res *http.Response) {
-	if res.StatusCode != exp {
-		log.Fatalf("Expected %v %v, got %v", exp, m, res.Status)
 	}
 }
 
@@ -142,18 +161,32 @@ func getJSON(name, subu string, out interface{}) string {
 	maybeFatal(name, err)
 
 	req.SetBasicAuth(*username, *password)
-	res, err := http.DefaultClient.Do(req)
-	maybeFatal(name, err)
-	maybeHTTPFatal(name, 200, res)
-	defer res.Body.Close()
+	for i := 0; i < 3; i++ {
+		if i > 0 {
+			log.Printf("Retrying JSON req to %v", req.URL)
+		}
 
-	links := parseLink(res.Header.Get("Link"))
+		var res *http.Response
+		res, err = http.DefaultClient.Do(req)
+		if err != nil {
+			continue
+		}
+		defer res.Body.Close()
+		if res.StatusCode != 200 {
+			err = fmt.Errorf("HTTP Error: %v", res.Status)
+			continue
+		}
 
-	d := json.NewDecoder(res.Body)
+		links := parseLink(res.Header.Get("Link"))
 
-	maybeFatal(name, d.Decode(out))
+		d := json.NewDecoder(res.Body)
 
-	return links["next"]
+		maybeFatal(name, d.Decode(out))
+
+		return links["next"]
+	}
+	log.Fatalf("Error getting JSON from %v: %v", u, err)
+	panic("unreachable")
 }
 
 func listRepos() chan Repo {
@@ -236,14 +269,10 @@ func createHook(r Repo) Hook {
 	req.SetBasicAuth(*username, *password)
 	req.Header.Set("Content-Type", "application/json")
 	req.ContentLength = int64(len(body))
-	res, err := http.DefaultClient.Do(req)
-	maybeFatal("creating hook", err)
-	maybeHTTPFatal("creating hook", 201, res)
-	defer res.Body.Close()
 
 	rv := Hook{}
-	d := json.NewDecoder(res.Body)
-	maybeFatal("creating hook", d.Decode(&rv))
+	retryableHTTP("create hook", 201, req, &rv)
+
 	return rv
 }
 
@@ -255,10 +284,7 @@ func teardown(id int, r Repo) {
 	maybeFatal("deleting hook", err)
 
 	req.SetBasicAuth(*username, *password)
-	res, err := http.DefaultClient.Do(req)
-	maybeFatal("creating hook", err)
-	maybeHTTPFatal("creating hook", 204, res)
-	res.Body.Close()
+	retryableHTTP("create hook", 204, req, nil)
 }
 
 func setup(id int, r Repo) {
