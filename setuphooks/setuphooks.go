@@ -13,6 +13,7 @@ import (
 	"strings"
 	"text/tabwriter"
 	"text/template"
+	"time"
 
 	"github.com/dustin/go-jsonpointer"
 )
@@ -79,6 +80,7 @@ func retryableHTTP(name string, st int, req *http.Request, jd interface{}) {
 	for i := 0; i < 3; i++ {
 		if i > 0 {
 			log.Printf("Retrying %v to %v", req.Method, req.URL)
+			time.Sleep(time.Second * time.Duration(i))
 		}
 
 		var res *http.Response
