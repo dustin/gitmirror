@@ -28,12 +28,12 @@ var test = flag.Bool("t", false, "Test hooks when creating them")
 var testAll = flag.Bool("T", false, "Test all hooks")
 var del = flag.Bool("d", false, "Delete, instead of adding a hook.")
 var events = flag.String("events", "push", "Comma separated list of events")
-var repo = flag.String("repo", "", "Specific repo (default: all)")
+var repoFlag = flag.String("repo", "", "Specific repo (default: all)")
 var verbose = flag.Bool("v", false, "Print more stuff")
 
 var tmpl *template.Template
 
-type Hook struct {
+type hook struct {
 	ID     int                    `json:"id,omitempty"`
 	URL    string                 `json:"url,omitempty"`
 	Name   string                 `json:"name"`
@@ -104,7 +104,7 @@ func retryableHTTP(name string, st int, req *http.Request, jd interface{}) {
 	log.Fatalf("Couldn't do %v against %s: %v", req.Method, req.URL, err)
 }
 
-func (h Hook) Test(r Repo) {
+func (h hook) Test(r repo) {
 	log.Printf("Testing %v -> %v", r.FullName,
 		jsonpointer.Get(h.Config, "/url"))
 	u := base + "/repos/" + r.FullName + "/hooks/" +
@@ -117,8 +117,8 @@ func (h Hook) Test(r Repo) {
 	retryableHTTP("hook test", 204, req, nil)
 }
 
-type Repo struct {
-	Id    int
+type repo struct {
+	ID    int
 	Owner struct {
 		Login string
 		Id    int
@@ -191,8 +191,8 @@ func getJSON(name, subu string, out interface{}) string {
 	panic("unreachable")
 }
 
-func listRepos() chan Repo {
-	rv := make(chan Repo)
+func listRepos() chan repo {
+	rv := make(chan repo)
 
 	go func() {
 		defer close(rv)
@@ -202,7 +202,7 @@ func listRepos() chan Repo {
 		}
 
 		for next != "" {
-			repos := []Repo{}
+			repos := []repo{}
 			log.Printf("Fetching repos from %v", next)
 			next = getJSON("repo list", next, &repos)
 
@@ -214,7 +214,7 @@ func listRepos() chan Repo {
 	return rv
 }
 
-func mirrorFor(r Repo) string {
+func mirrorFor(r repo) string {
 	b := bytes.Buffer{}
 	maybeFatal("executing template", tmpl.Execute(&b, r))
 	return b.String()
@@ -238,7 +238,7 @@ func containsAll(haystack, needles []string) bool {
 	return true
 }
 
-func mirrorId(r Repo, hooks []Hook) int {
+func mirrorId(r repo, hooks []hook) int {
 	u := mirrorFor(r)
 	for _, h := range hooks {
 		if h.Name == "web" && jsonpointer.Get(h.Config, "/url") == u &&
@@ -253,8 +253,8 @@ func mirrorId(r Repo, hooks []Hook) int {
 	return -1
 }
 
-func createHook(r Repo) Hook {
-	h := Hook{
+func createHook(r repo) hook {
+	h := hook{
 		Name:   "web",
 		Active: true,
 		Events: strings.Split(*events, ","),
@@ -272,13 +272,13 @@ func createHook(r Repo) Hook {
 	req.Header.Set("Content-Type", "application/json")
 	req.ContentLength = int64(len(body))
 
-	rv := Hook{}
+	rv := hook{}
 	retryableHTTP("create hook", 201, req, &rv)
 
 	return rv
 }
 
-func teardown(id int, r Repo) {
+func teardown(id int, r repo) {
 	req, err := http.NewRequest("DELETE",
 		fmt.Sprintf("%v/repos/%v/hooks/%v",
 			base, r.FullName, id),
@@ -289,17 +289,17 @@ func teardown(id int, r Repo) {
 	retryableHTTP("create hook", 204, req, nil)
 }
 
-func setup(id int, r Repo) {
+func setup(id int, r repo) {
 	h := createHook(r)
 	if *test {
 		h.Test(r)
 	}
 }
 
-func updateHooks(r Repo) {
-	hooks := []Hook{}
+func updateHooks(r repo) {
+	hooks := []hook{}
 	getJSON(r.FullName, "/repos/"+r.FullName+"/hooks", &hooks)
-	actions := map[string]func(int, Repo){
+	actions := map[string]func(int, repo){
 		"setup":    setup,
 		"teardown": teardown,
 	}
@@ -334,8 +334,8 @@ func updateHooks(r Repo) {
 	}
 }
 
-func getRepo(name string) Repo {
-	rv := Repo{}
+func getRepo(name string) repo {
+	rv := repo{}
 	parts := strings.Split(name, "/")
 	if len(parts) == 1 {
 		rv.FullName = *username + "/" + parts[0]
@@ -366,11 +366,11 @@ func main() {
 	maybeFatal("parsing template", err)
 	tmpl = t
 
-	if *repo == "" {
+	if *repoFlag == "" {
 		for r := range listRepos() {
 			updateHooks(r)
 		}
 	} else {
-		updateHooks(getRepo(*repo))
+		updateHooks(getRepo(*repoFlag))
 	}
 }

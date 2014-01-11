@@ -18,7 +18,7 @@ import (
 var thePath = flag.String("dir", "/tmp", "working directory")
 var git = flag.String("git", "/usr/bin/git", "path to git")
 
-type CommandRequest struct {
+type commandRequest struct {
 	w       http.ResponseWriter
 	abspath string
 	bg      bool
@@ -27,7 +27,7 @@ type CommandRequest struct {
 	ch      chan bool
 }
 
-var reqch = make(chan CommandRequest, 100)
+var reqch = make(chan commandRequest, 100)
 var updates = map[string]time.Time{}
 
 func exists(path string) (rv bool) {
@@ -47,8 +47,8 @@ func maybePanic(err error) {
 func runCommands(w http.ResponseWriter, bg bool,
 	abspath string, cmds []*exec.Cmd) {
 
-	var stderr io.Writer = ioutil.Discard
-	var stdout io.Writer = ioutil.Discard
+	stderr := io.Writer(ioutil.Discard)
+	stdout := io.Writer(ioutil.Discard)
 
 	if !bg {
 		stderr = &bytes.Buffer{}
@@ -101,7 +101,7 @@ func didRun(path string, t time.Time) {
 	updates[path] = t
 }
 
-func pathRunner(ch chan CommandRequest) {
+func pathRunner(ch chan commandRequest) {
 	for r := range ch {
 		if shouldRun(r.abspath, r.after) {
 			t := time.Now()
@@ -121,12 +121,12 @@ func pathRunner(ch chan CommandRequest) {
 }
 
 func commandRunner() {
-	m := map[string]chan CommandRequest{}
+	m := map[string]chan commandRequest{}
 
 	for r := range reqch {
 		ch, running := m[r.abspath]
 		if !running {
-			ch = make(chan CommandRequest, 10)
+			ch = make(chan commandRequest, 10)
 			m[r.abspath] = ch
 			go pathRunner(ch)
 		}
@@ -136,7 +136,7 @@ func commandRunner() {
 
 func queueCommand(w http.ResponseWriter, bg bool,
 	abspath string, cmds []*exec.Cmd) chan bool {
-	req := CommandRequest{w, abspath, bg, time.Now(),
+	req := commandRequest{w, abspath, bg, time.Now(),
 		cmds, make(chan bool)}
 	reqch <- req
 	return req.ch
