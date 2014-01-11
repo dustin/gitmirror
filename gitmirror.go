@@ -38,6 +38,12 @@ func exists(path string) (rv bool) {
 	return
 }
 
+func maybePanic(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 func runCommands(w http.ResponseWriter, bg bool,
 	abspath string, cmds []*exec.Cmd) {
 
@@ -74,9 +80,11 @@ func runCommands(w http.ResponseWriter, bg bool,
 
 	if !bg {
 		fmt.Fprintf(w, "---- stdout ----\n")
-		stdout.(*bytes.Buffer).WriteTo(w)
+		_, err := stdout.(*bytes.Buffer).WriteTo(w)
+		maybePanic(err)
 		fmt.Fprintf(w, "\n----\n\n\n---- stderr ----\n")
-		stderr.(*bytes.Buffer).WriteTo(w)
+		_, err = stderr.(*bytes.Buffer).WriteTo(w)
+		maybePanic(err)
 		fmt.Fprintf(w, "\n----\n")
 	}
 }
