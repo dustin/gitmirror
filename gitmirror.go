@@ -17,7 +17,7 @@ import (
 
 var thePath = flag.String("dir", "/tmp", "working directory")
 var git = flag.String("git", "/usr/bin/git", "path to git")
-var shell = flag.String("shell", "/bin/bash", "path to shell")
+var shell = flag.String("shell", "/bin/sh", "path to shell")
 var gitCommand = flag.String("command", "git remote update -p", "command to run")
 var port = flag.String("port", ":8124", "port to listen on")
 
