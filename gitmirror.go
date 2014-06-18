@@ -17,6 +17,7 @@ import (
 
 var thePath = flag.String("dir", "/tmp", "working directory")
 var git = flag.String("git", "/usr/bin/git", "path to git")
+var port = flag.Int("port", 8124, "port to listen on")
 
 type commandRequest struct {
 	w       http.ResponseWriter
@@ -273,5 +274,7 @@ func main() {
 		func(w http.ResponseWriter, req *http.Request) {
 			http.Error(w, "No favicon", http.StatusGone)
 		})
-	log.Fatal(http.ListenAndServe(":8124", nil))
+
+	addr := fmt.Sprintf(":%d", *port)
+	log.Fatal(http.ListenAndServe(addr, nil))
 }
