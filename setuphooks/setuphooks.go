@@ -48,9 +48,9 @@ func init() {
 			os.Args[0])
 		flag.PrintDefaults()
 		tdoc := map[string]string{
-			"{{.Id}}":          "numeric ID of repo",
+			"{{.ID}}":          "numeric ID of repo",
 			"{{.Owner.Login}}": "github username of repo owner",
-			"{{.Owner.Id}}":    "github numeric id of repo owner",
+			"{{.Owner.ID}}":    "github numeric id of repo owner",
 			"{{.Name}}":        "short name of repo (e.g. gitmirror)",
 			"{{.FullName}}":    "full name of repo (e.g. dustin/gitmirror)",
 			"{{.Language}}":    "repository language (if detected)",
@@ -121,7 +121,7 @@ type repo struct {
 	ID    int
 	Owner struct {
 		Login string
-		Id    int
+		ID    int
 	}
 	Name     string
 	FullName string `json:"full_name"`
@@ -238,7 +238,7 @@ func containsAll(haystack, needles []string) bool {
 	return true
 }
 
-func mirrorId(r repo, hooks []hook) int {
+func mirrorID(r repo, hooks []hook) int {
 	u := mirrorFor(r)
 	for _, h := range hooks {
 		if h.Name == "web" && jsonpointer.Get(h.Config, "/url") == u &&
@@ -318,7 +318,7 @@ func updateHooks(r repo) {
 
 	action := "setup"
 
-	id := mirrorId(r, hooks)
+	id := mirrorID(r, hooks)
 	switch {
 	case id >= 0 && *del:
 		action = "teardown"
