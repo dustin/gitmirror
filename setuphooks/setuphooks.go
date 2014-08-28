@@ -20,18 +20,20 @@ import (
 
 const base = "https://api.github.com"
 
-var username = flag.String("user", "", "Your github username")
-var password = flag.String("pass", "", "Your github password")
-var org = flag.String("org", "", "Organization to check")
-var noop = flag.Bool("n", false, "If true, don't make any hook changes")
-var test = flag.Bool("t", false, "Test hooks when creating them")
-var testAll = flag.Bool("T", false, "Test all hooks")
-var del = flag.Bool("d", false, "Delete, instead of adding a hook.")
-var events = flag.String("events", "push", "Comma separated list of events")
-var repoFlag = flag.String("repo", "", "Specific repo (default: all)")
-var verbose = flag.Bool("v", false, "Print more stuff")
+var (
+	username = flag.String("user", "", "Your github username")
+	password = flag.String("pass", "", "Your github password")
+	org      = flag.String("org", "", "Organization to check")
+	noop     = flag.Bool("n", false, "If true, don't make any hook changes")
+	test     = flag.Bool("t", false, "Test hooks when creating them")
+	testAll  = flag.Bool("T", false, "Test all hooks")
+	del      = flag.Bool("d", false, "Delete, instead of adding a hook.")
+	events   = flag.String("events", "push", "Comma separated list of events")
+	repoFlag = flag.String("repo", "", "Specific repo (default: all)")
+	verbose  = flag.Bool("v", false, "Print more stuff")
 
-var tmpl *template.Template
+	tmpl *template.Template
+)
 
 type hook struct {
 	ID     int                    `json:"id,omitempty"`
