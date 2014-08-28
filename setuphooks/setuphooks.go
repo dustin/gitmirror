@@ -31,6 +31,8 @@ var (
 	events   = flag.String("events", "push", "Comma separated list of events")
 	repoFlag = flag.String("repo", "", "Specific repo (default: all)")
 	verbose  = flag.Bool("v", false, "Print more stuff")
+	secret   = flag.String("secret", "",
+		"Optional secret to authenticate inbound hooks")
 
 	tmpl *template.Template
 )
@@ -261,6 +263,9 @@ func createHook(r repo) hook {
 		Active: true,
 		Events: strings.Split(*events, ","),
 		Config: map[string]interface{}{"url": mirrorFor(r)},
+	}
+	if *secret != "" {
+		h.Config["secret"] = *secret
 	}
 	body, err := json.Marshal(&h)
 	maybeFatal("encoding", err)
