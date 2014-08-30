@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/dustin/go-jsonpointer"
+	"github.com/dustin/httputil"
 )
 
 const base = "https://api.github.com"
@@ -103,7 +104,7 @@ func retryableHTTP(name string, st int, req *http.Request, jd interface{}) {
 			}
 			return
 		}
-		err = fmt.Errorf("HTTP Error: %v", res.Status)
+		err = httputil.HTTPError(res)
 	}
 	log.Fatalf("Couldn't do %v against %s: %v", req.Method, req.URL, err)
 }
@@ -179,7 +180,7 @@ func getJSON(name, subu string, out interface{}) string {
 		}
 		defer res.Body.Close()
 		if res.StatusCode != 200 {
-			err = fmt.Errorf("HTTP Error: %v", res.Status)
+			err = httputil.HTTPError(res)
 			continue
 		}
 
