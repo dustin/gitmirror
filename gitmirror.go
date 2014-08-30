@@ -2,22 +2,32 @@ package main
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha1"
+	"crypto/subtle"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
 )
 
-var thePath = flag.String("dir", "/tmp", "working directory")
-var git = flag.String("git", "/usr/bin/git", "path to git")
-var addr = flag.String("addr", ":8124", "binding address to listen on")
+var (
+	thePath = flag.String("dir", "/tmp", "working directory")
+	git     = flag.String("git", "/usr/bin/git", "path to git")
+	addr    = flag.String("addr", ":8124", "binding address to listen on")
+	secret  = flag.String("secret", "",
+		"Optional secret for authenticating hooks")
+)
 
 type commandRequest struct {
 	w       http.ResponseWriter
@@ -31,12 +41,11 @@ type commandRequest struct {
 var reqch = make(chan commandRequest, 100)
 var updates = map[string]time.Time{}
 
-func exists(path string) (rv bool) {
-	rv = true
+func exists(path string) bool {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		rv = false
+		return false
 	}
-	return
+	return true
 }
 
 func maybePanic(err error) {
@@ -48,8 +57,8 @@ func maybePanic(err error) {
 func runCommands(w http.ResponseWriter, bg bool,
 	abspath string, cmds []*exec.Cmd) {
 
-	stderr := io.Writer(ioutil.Discard)
-	stdout := io.Writer(ioutil.Discard)
+	stderr := ioutil.Discard
+	stdout := ioutil.Discard
 
 	if !bg {
 		stderr = &bytes.Buffer{}
@@ -231,8 +240,42 @@ func handleGet(w http.ResponseWriter, req *http.Request, bg bool) {
 	doUpdate(w, path, bg, nil)
 }
 
+func parseAndMAC(r io.Reader) (url.Values, error) {
+	maxFormSize := int64(1<<63 - 1)
+	maxFormSize = int64(10 << 20) // 10 MB is a lot of text.
+	r = io.LimitReader(r, maxFormSize+1)
+	b, err := ioutil.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	log.Printf("Read %v bytes of body", len(b))
+	if int64(len(b)) > maxFormSize {
+		err = errors.New("http: POST too large")
+		return nil, err
+	}
+	return url.ParseQuery(string(b))
+}
+
+func checkHMAC(h hash.Hash, sig string) bool {
+	got := fmt.Sprintf("sha1=%x", h.Sum(nil))
+	return subtle.ConstantTimeCompare([]byte(got), []byte(sig)) == 1
+}
+
 func handlePost(w http.ResponseWriter, req *http.Request, bg bool) {
-	b := []byte(req.FormValue("payload"))
+	mac := hmac.New(sha1.New, []byte(*secret))
+	mac.Reset()
+	r := io.TeeReader(req.Body, mac)
+	form, err := parseAndMAC(r)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	b := []byte(form.Get("payload"))
+
+	if !(*secret == "" || checkHMAC(mac, req.Header.Get("X-Hub-Signature"))) {
+		http.Error(w, "not authorized", http.StatusUnauthorized)
+		return
+	}
 
 	path := getPath(req)
 	abspath := filepath.Join(*thePath, path)
@@ -245,7 +288,7 @@ func handlePost(w http.ResponseWriter, req *http.Request, bg bool) {
 }
 
 func handleReq(w http.ResponseWriter, req *http.Request) {
-	backgrounded := req.FormValue("bg") != "false"
+	backgrounded := req.URL.Query().Get("bg") != "false"
 
 	log.Printf("Handling %v %v", req.Method, req.URL.Path)
 
