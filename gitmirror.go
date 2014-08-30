@@ -178,6 +178,9 @@ func updateGit(w http.ResponseWriter, section string,
 }
 
 func getPath(req *http.Request) string {
+	if qp := req.URL.Query().Get("name"); qp != "" {
+		return filepath.Clean(qp)
+	}
 	return filepath.Clean(filepath.FromSlash(req.URL.Path))[1:]
 }
 
