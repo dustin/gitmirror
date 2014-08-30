@@ -146,8 +146,6 @@ func queueCommand(w http.ResponseWriter, bg bool,
 func updateGit(w http.ResponseWriter, section string,
 	bg bool, payload []byte) bool {
 
-	time.Sleep(5 * time.Second)
-
 	abspath := filepath.Join(*thePath, section)
 
 	if !exists(abspath) {
