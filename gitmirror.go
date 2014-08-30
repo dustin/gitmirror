@@ -251,7 +251,6 @@ func parseAndMAC(r io.Reader) (url.Values, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Read %v bytes of body", len(b))
 	if int64(len(b)) > maxFormSize {
 		err = errors.New("http: POST too large")
 		return nil, err
