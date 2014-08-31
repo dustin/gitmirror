@@ -239,15 +239,14 @@ func doUpdate(w http.ResponseWriter, path string,
 }
 
 func handleGet(w http.ResponseWriter, req *http.Request, bg bool) {
-	path := getPath(req)
-	doUpdate(w, path, bg, nil)
+	doUpdate(w, getPath(req), bg, nil)
 }
 
-func parseAndMAC(r io.Reader) (url.Values, error) {
+// parseForm parses an HTTP POST form from an io.Reader.
+func parseForm(r io.Reader) (url.Values, error) {
 	maxFormSize := int64(1<<63 - 1)
 	maxFormSize = int64(10 << 20) // 10 MB is a lot of text.
-	r = io.LimitReader(r, maxFormSize+1)
-	b, err := ioutil.ReadAll(r)
+	b, err := ioutil.ReadAll(io.LimitReader(r, maxFormSize+1))
 	if err != nil {
 		return nil, err
 	}
@@ -264,10 +263,12 @@ func checkHMAC(h hash.Hash, sig string) bool {
 }
 
 func handlePost(w http.ResponseWriter, req *http.Request, bg bool) {
+	// We're teeing the form parsing into a sha1 HMAC so we can
+	// authenticate what we actually parsed (if we *secret is set,
+	// anyway)
 	mac := hmac.New(sha1.New, []byte(*secret))
-	mac.Reset()
 	r := io.TeeReader(req.Body, mac)
-	form, err := parseAndMAC(r)
+	form, err := parseForm(r)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
@@ -280,9 +281,8 @@ func handlePost(w http.ResponseWriter, req *http.Request, bg bool) {
 	}
 
 	path := getPath(req)
-	abspath := filepath.Join(*thePath, path)
 
-	if exists(abspath) {
+	if exists(filepath.Join(*thePath, path)) {
 		doUpdate(w, path, bg, b)
 	} else {
 		createRepo(w, path, bg, b)
