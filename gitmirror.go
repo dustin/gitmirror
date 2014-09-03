@@ -259,7 +259,8 @@ func parseForm(r io.Reader) (url.Values, error) {
 
 func checkHMAC(h hash.Hash, sig string) bool {
 	got := fmt.Sprintf("sha1=%x", h.Sum(nil))
-	return subtle.ConstantTimeCompare([]byte(got), []byte(sig)) == 1
+	return len(got) == len(sig) && subtle.ConstantTimeCompare(
+		[]byte(got), []byte(sig)) == 1
 }
 
 func handlePost(w http.ResponseWriter, req *http.Request, bg bool) {
