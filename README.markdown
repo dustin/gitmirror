@@ -87,6 +87,10 @@ Now I've got a URL available on the internet I can use to set up
 github post-receive-hooks to update as well as git `post-commit` hooks
 for the more private/weird stuff.
 
+### But I Don't Have a Public Address
+
+See [wwcp][wwcp] for a way to run entirely behind a firewall.
+
 ## Hooks
 
 gitmirror will run `post-fetch` hooks for you if you have them
@@ -116,3 +120,4 @@ mirror.
 [curl]: http://curl.haxx.se/
 [startup]: http://dustin.github.com/2010/02/28/running-processes.html
 [setuphooks]: gitmirror/tree/master/setuphooks
+[wwcp]: //github.com/dustin/wwcp
