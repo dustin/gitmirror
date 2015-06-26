@@ -26,7 +26,7 @@ the gitmirror source into it:
 
     mkdir /tmp/gitmirrors
     cd /tmp/gitmirrors
-    git clone git://github.com/dustin/gitmirror
+    git clone --mirror git://github.com/dustin/gitmirror
 
 (note, don't actually use `/tmp/` as your permanent mirror path)
 
