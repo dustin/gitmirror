@@ -207,7 +207,11 @@ func createRepo(w http.ResponseWriter, section string,
 	case string:
 		ownerName = i
 	case map[string]interface{}:
-		ownerName = fmt.Sprintf("%v", i["name"])
+		if x, ok := i["login"]; ok {
+			ownerName = fmt.Sprintf("%v", x)
+		} else {
+			ownerName = fmt.Sprintf("%v", i["name"])
+		}
 	}
 
 	repo := fmt.Sprintf("git://github.com/%v/%v.git",
