@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/hmac"
 	"crypto/sha1"
+	"errors"
 	"io"
 	"testing"
 )
@@ -178,4 +179,16 @@ func TestExists(t *testing.T) {
 			t.Errorf("exists(%q) = %v; want %v", test.path, got, test.want)
 		}
 	}
+}
+
+func TestMaybeFails(t *testing.T) {
+	defer func() {
+		if err := recover(); err == nil {
+			t.Errorf("failed to fail")
+		} else {
+			// success
+		}
+	}()
+
+	maybePanic(errors.New("die die die, my darling"))
 }
