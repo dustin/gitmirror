@@ -162,3 +162,20 @@ const testOrgPushHook = `{
     "site_admin": false
   }
 }`
+
+func TestExists(t *testing.T) {
+	tests := []struct {
+		path string
+		want bool
+	}{
+		{"gitmirror.go", true},
+		{"svnmirror.go", false},
+	}
+
+	for _, test := range tests {
+		got := exists(test.path)
+		if got != test.want {
+			t.Errorf("exists(%q) = %v; want %v", test.path, got, test.want)
+		}
+	}
+}
