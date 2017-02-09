@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha1"
 	"crypto/subtle"
@@ -152,8 +153,7 @@ func queueCommand(w http.ResponseWriter, bg bool,
 	return req.ch
 }
 
-func updateGit(w http.ResponseWriter, section string,
-	bg bool, payload []byte) bool {
+func updateGit(ctx context.Context, w http.ResponseWriter, section string, bg bool, payload []byte) bool {
 
 	abspath := filepath.Join(*thePath, section)
 
@@ -165,10 +165,10 @@ func updateGit(w http.ResponseWriter, section string,
 	}
 
 	cmds := []*exec.Cmd{
-		exec.Command(*git, "remote", "update", "-p"),
-		exec.Command(*git, "gc", "--auto"),
-		exec.Command(filepath.Join(abspath, "hooks/post-fetch")),
-		exec.Command(filepath.Join(*thePath, "bin/post-fetch")),
+		exec.CommandContext(ctx, *git, "remote", "update", "-p"),
+		exec.CommandContext(ctx, *git, "gc", "--auto"),
+		exec.CommandContext(ctx, filepath.Join(abspath, "hooks/post-fetch")),
+		exec.CommandContext(ctx, filepath.Join(*thePath, "bin/post-fetch")),
 	}
 
 	cmds[2].Stdin = bytes.NewBuffer(payload)
@@ -184,7 +184,7 @@ func getPath(req *http.Request) string {
 	return filepath.Clean(filepath.FromSlash(req.URL.Path))[1:]
 }
 
-func createRepo(w http.ResponseWriter, section string,
+func createRepo(ctx context.Context, w http.ResponseWriter, section string,
 	bg bool, payload []byte) {
 
 	p := struct {
@@ -222,7 +222,7 @@ func createRepo(w http.ResponseWriter, section string,
 	}
 
 	cmds := []*exec.Cmd{
-		exec.Command(*git, "clone", "--mirror", "--bare", repo,
+		exec.CommandContext(ctx, *git, "clone", "--mirror", "--bare", repo,
 			filepath.Join(*thePath, section)),
 	}
 
@@ -232,18 +232,18 @@ func createRepo(w http.ResponseWriter, section string,
 	queueCommand(w, true, "/tmp", cmds)
 }
 
-func doUpdate(w http.ResponseWriter, path string,
+func doUpdate(ctx context.Context, w http.ResponseWriter, path string,
 	bg bool, payload []byte) {
 	if bg {
-		go updateGit(w, path, bg, payload)
+		go updateGit(context.Background(), w, path, bg, payload)
 		w.WriteHeader(201)
 	} else {
-		updateGit(w, path, bg, payload)
+		updateGit(ctx, w, path, bg, payload)
 	}
 }
 
 func handleGet(w http.ResponseWriter, req *http.Request, bg bool) {
-	doUpdate(w, getPath(req), bg, nil)
+	doUpdate(req.Context(), w, getPath(req), bg, nil)
 }
 
 // parseForm parses an HTTP POST form from an io.Reader.
@@ -288,9 +288,9 @@ func handlePost(w http.ResponseWriter, req *http.Request, bg bool) {
 	path := getPath(req)
 
 	if exists(filepath.Join(*thePath, path)) {
-		doUpdate(w, path, bg, b)
+		doUpdate(req.Context(), w, path, bg, b)
 	} else {
-		createRepo(w, path, bg, b)
+		createRepo(req.Context(), w, path, bg, b)
 	}
 }
 
