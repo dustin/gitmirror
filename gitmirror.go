@@ -221,13 +221,13 @@ func createRepo(ctx context.Context, w http.ResponseWriter, section string,
 			ownerName, p.Repository.Name)
 	}
 
+	if bg {
+		ctx = context.Background()
+		w.WriteHeader(201)
+	}
 	cmds := []*exec.Cmd{
 		exec.CommandContext(ctx, *git, "clone", "--mirror", "--bare", repo,
 			filepath.Join(*thePath, section)),
-	}
-
-	if bg {
-		w.WriteHeader(201)
 	}
 	queueCommand(w, true, "/tmp", cmds)
 }
