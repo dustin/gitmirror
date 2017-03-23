@@ -225,11 +225,14 @@ func createRepo(ctx context.Context, w http.ResponseWriter, section string,
 		ctx = context.Background()
 		w.WriteHeader(201)
 	}
+	abspath := filepath.Join(*thePath, section)
+	os.Mkdir(abspath, os.ModePerm)
 	cmds := []*exec.Cmd{
-		exec.CommandContext(ctx, *git, "clone", "--mirror", "--bare", repo,
-			filepath.Join(*thePath, section)),
+		exec.CommandContext(ctx, *git, "clone", "--mirror", "--bare", repo, abspath),
+		exec.Command(filepath.Join(abspath, "hooks/post-fetch")),
+		exec.Command(filepath.Join(*thePath, "bin/post-fetch")),
 	}
-	queueCommand(w, true, "/tmp", cmds)
+	queueCommand(w, true, abspath, cmds)
 }
 
 func doUpdate(ctx context.Context, w http.ResponseWriter, path string,
