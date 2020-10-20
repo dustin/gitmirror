@@ -1,9 +1,9 @@
 # What's This?
 
-I've got a few git repos places I automatically clone git repos and
-wanted to make sure these things stay up-to-date.  Some repos are on
-github, some are on other machines around the internet.  They all look
-the same here.
+I've got a few git repos and a few places I automatically clone git
+repos and wanted to make sure these things stay up-to-date.  Some
+repos are on github, some are on other machines around the internet.
+They all look the same here.
 
 gitmirror updates git repositories on webhook triggers.  This can be
 anything from a simple invocation of `curl` from a post-commit hook to
