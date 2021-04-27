@@ -25,6 +25,7 @@ import (
 var (
 	thePath = flag.String("dir", "/tmp", "working directory")
 	git     = flag.String("git", "/usr/bin/git", "path to git")
+        proto   = flag.String("proto", "git", "git protocol to use")
 	addr    = flag.String("addr", ":8124", "binding address to listen on")
 	secret  = flag.String("secret", "",
 		"Optional secret for authenticating hooks")
@@ -214,8 +215,8 @@ func createRepo(ctx context.Context, w http.ResponseWriter, section string,
 		}
 	}
 
-	repo := fmt.Sprintf("git://github.com/%v/%v.git",
-		ownerName, p.Repository.Name)
+	repo := fmt.Sprintf("%v://github.com/%v/%v.git",
+		*proto, ownerName, p.Repository.Name)
 	if p.Repository.Private {
 		repo = fmt.Sprintf("git@github.com:%v/%v.git",
 			ownerName, p.Repository.Name)
