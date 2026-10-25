@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -25,7 +24,7 @@ import (
 var (
 	thePath = flag.String("dir", "/tmp", "working directory")
 	git     = flag.String("git", "/usr/bin/git", "path to git")
-        proto   = flag.String("proto", "git", "git protocol to use")
+	proto   = flag.String("proto", "git", "git protocol to use")
 	addr    = flag.String("addr", ":8124", "binding address to listen on")
 	secret  = flag.String("secret", "",
 		"Optional secret for authenticating hooks")
@@ -59,8 +58,8 @@ func maybePanic(err error) {
 func runCommands(w http.ResponseWriter, bg bool,
 	abspath string, cmds []*exec.Cmd) {
 
-	stderr := ioutil.Discard
-	stdout := ioutil.Discard
+	stderr := io.Discard
+	stdout := io.Discard
 
 	if !bg {
 		stderr = &bytes.Buffer{}
@@ -254,7 +253,7 @@ func handleGet(w http.ResponseWriter, req *http.Request, bg bool) {
 func parseForm(r io.Reader) (url.Values, error) {
 	maxFormSize := int64(1<<63 - 1)
 	maxFormSize = int64(10 << 20) // 10 MB is a lot of text.
-	b, err := ioutil.ReadAll(io.LimitReader(r, maxFormSize+1))
+	b, err := io.ReadAll(io.LimitReader(r, maxFormSize+1))
 	if err != nil {
 		return nil, err
 	}
