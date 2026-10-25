@@ -1,8 +1,11 @@
-with import <nixpkgs> {};
-
-stdenv.mkDerivation {
-  name = "haskell";
+{ pkgs ? import <nixpkgs> { } }:
+with pkgs;
+mkShell {
   buildInputs = [
     go
+    gotools
   ];
+
+  shellHook = ''
+  '';
 }
