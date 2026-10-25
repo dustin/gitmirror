@@ -20,7 +20,7 @@ environment configured properly):
 
 ```
 Usage:
-./setuphooks/setuphooks.mac [opts] template
+GITHUB_TOKEN=some_pat ./setuphooks/setuphooks.mac [opts] template
 
 Options:
   -T=false: Test all hooks
@@ -28,7 +28,6 @@ Options:
   -events="push": Comma separated list of events
   -n=false: If true, don't make any hook changes
   -org="": Organization to check
-  -pass="": Your github password
   -repo="": Specific repo (default: all)
   -t=false: Test hooks when creating them
   -user="": Your github username
