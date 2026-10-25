@@ -22,8 +22,10 @@ import (
 const base = "https://api.github.com"
 
 var (
-	username = flag.String("user", "", "Your github username")
-	password = flag.String("pass", "", "Your github password")
+	username = flag.String("user", "",
+		"Your github username (used to qualify bare -repo names)")
+	token = flag.String("token", os.Getenv("GITHUB_TOKEN"),
+		"Github personal access token (default: $GITHUB_TOKEN)")
 	org      = flag.String("org", "", "Organization to check")
 	noop     = flag.Bool("n", false, "If true, don't make any hook changes")
 	test     = flag.Bool("t", false, "Test hooks when creating them")
@@ -80,6 +82,11 @@ func init() {
 	}
 }
 
+func setAuth(req *http.Request) {
+	req.Header.Set("Authorization", "Bearer "+*token)
+	req.Header.Set("Accept", "application/vnd.github+json")
+}
+
 func retryableHTTP(name string, st int, req *http.Request, jd interface{}) {
 	var err error
 	for i := 0; i < 3; i++ {
@@ -118,7 +125,7 @@ func (h hook) Test(r repo) {
 	req, err := http.NewRequest("POST", u, nil)
 	maybeFatal("hook test", err)
 
-	req.SetBasicAuth(*username, *password)
+	setAuth(req)
 	retryableHTTP("hook test", 204, req, nil)
 }
 
@@ -167,7 +174,7 @@ func getJSON(name, subu string, out interface{}) string {
 	req, err := http.NewRequest("GET", u, nil)
 	maybeFatal(name, err)
 
-	req.SetBasicAuth(*username, *password)
+	setAuth(req)
 	for i := 0; i < 3; i++ {
 		if i > 0 {
 			log.Printf("Retrying JSON req to %v", req.URL)
@@ -276,7 +283,7 @@ func createHook(r repo) hook {
 		bytes.NewReader(body))
 	maybeFatal("creating hook", err)
 
-	req.SetBasicAuth(*username, *password)
+	setAuth(req)
 	req.Header.Set("Content-Type", "application/json")
 	req.ContentLength = int64(len(body))
 
@@ -293,7 +300,7 @@ func teardown(id int, r repo) {
 		nil)
 	maybeFatal("deleting hook", err)
 
-	req.SetBasicAuth(*username, *password)
+	setAuth(req)
 	retryableHTTP("create hook", 204, req, nil)
 }
 
@@ -360,6 +367,10 @@ func getRepo(name string) repo {
 func main() {
 	log.SetFlags(0)
 	flag.Parse()
+
+	if *token == "" {
+		log.Fatalf("No github token given; use -token or set $GITHUB_TOKEN")
+	}
 
 	var tmplText = ""
 	if flag.NArg() > 0 {
